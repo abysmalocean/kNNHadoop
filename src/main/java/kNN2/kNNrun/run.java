@@ -77,59 +77,6 @@ public class run {
 		
 	}
 	
-	/*
-	public static void bubbleSort(TreeMap<Double, String > Treemap) 
-	{
-	    int n = Treemap.size();
-	    Entry<Double, String> temp = Treemap.firstEntry();
-
-	    for (int i = 0; i < n; i++) {
-	        for (int j = 1; j < (n - i); j++) {
-
-	            if (Treemap.values().toArray()[j - 1]  Treemap[j])  {
-	                temp = numArray[j - 1];
-	                numArray[j - 1] = numArray[j];
-	                numArray[j] = temp;
-	            }
-
-	        }
-	    }
-	}
-	*/
-	
-	public static int[] predictions(Instances data)
-	{
-		System.out.println("data instace is " + data.numInstances());
-		//for(int i = 0 ; i <data.numInstances();i++)
-		for(int i = 0 ; i <2;i++)
-		{
-			double smallestDistance = Double.MAX_VALUE ;
-			int smallestDistanceClass;
-			//for(int j = 0;  j <data.numInstances(); j++) // target each other instance
-			for(int j = 0;  j < 2; j++) // target each other instance
-	        {
-				if(j == i) continue;
-				double distance = 0 ;
-				for(int k = 0; k < data.numAttributes() - 1 ; k++)
-				{
-					//System.out.println("(data.get(i).index(k))----->" + (data.get(i).value(k)) + "\n"  
-					//		+ "(data.get(i).index(k))----->" + (data.get(j).value(k)));
-					double diff = data.get(i).value(k) - data.get(j).value(k); 
-					distance += diff * diff ; 
-					//System.out.println("Distance is [ " + distance + " ]");
-				}
-				distance = Math.sqrt(distance);
-				if(distance < smallestDistance)
-				{
-					smallestDistance = distance;
-				}
-			
-	        }
-		}
-		return null;
-		
-	}
-	
 	public static class TokenizerMapper extends Mapper<Object, Text, Text, DistanceClass>{
 
 		private final static DoubleWritable one = new DoubleWritable(0.000);
@@ -143,29 +90,6 @@ public class run {
 		//TreeMap<Double, String> Kmap = new TreeMap<Double, String >();
 		ArrayList< TreeMap<Double, String> > Kmaplist = new ArrayList< TreeMap<Double, String> >() ;
 		DistanceClass DistanceClass = new DistanceClass();
-		
-		
-		   public static String getAttemptId(Configuration conf) throws IllegalArgumentException
-		   {
-			   // This whole function used for chech the mapper ID
-		       if (conf == null) {
-		           throw new NullPointerException("conf is null");
-		       }
-
-		       String taskId = conf.get("mapred.task.id");
-		       if (taskId == null) {
-		           throw new IllegalArgumentException("Configutaion does not contain the property mapred.task.id");
-		       }
-		       //System.out.println(taskId);
-		       String[] parts = taskId.split("_");
-		       if (parts.length != 6 ||
-		               !parts[0].equals("attempt") ||
-		               (!"m".equals(parts[3]) && !"r".equals(parts[3]))) {
-		           throw new IllegalArgumentException("TaskAttemptId string : " + taskId + " is not properly formed");
-		       }
-
-		       return parts[4] + "-" + parts[5];
-		   }
 		
 		@Override
 		protected void setup(Context context) throws IOException, InterruptedException 
@@ -201,15 +125,7 @@ public class run {
 		}
 		
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-			//StringTokenizer itr = new StringTokenizer(value.toString());
-			//System.out.println(getAttemptId(context.getConfiguration()));
-			/*
-			for (int i = 0; i < TestCaselist.size(); i++)
-			{
-				System.out.println(TestCaselist.get(i));
-			}
-			*/
-			
+
 			for (int i = 0; i < TestCaselist.size(); i++)
 			{
 				
@@ -232,10 +148,6 @@ public class run {
 				}
 				
 				//System.out.format("Distance between test list [ " + i +  " ]to the test is [ %10.1f ] -------->"+"[ " + trainValueString.toString() + " ] \n" ,testSum);
-				one.set( testSum );
-				word.set(trainValueString.toString());
-				//testSumWriteable.set(testSum);
-				
 				Kmaplist.get(i).put( testSum,trainValueString.toString());
 				
 				if(Kmaplist.get(i).size()>k)
@@ -255,61 +167,73 @@ public class run {
 			{
 				for(Map.Entry<Double, String> entry : Kmaplist.get(i).entrySet() )
 				{
-					Double distance    = entry.getKey();
-					String classbelong = entry.getValue()  ;
-					DistanceClass.set(distance,classbelong);
+					//DistanceClass distanceAndModelout = new DistanceClass();
+					distanceAndModel.set(entry.getKey(),entry.getValue());
 					word.set(Integer.toString(i));
-					//System.out.println("Mapper update the value key is "+ word + "value is " + distance + "Class is " + classbelong);
-					context.write(word, DistanceClass);		
+					//System.out.println("Mapper update the value key is "+ word + " value is " + distanceAndModelout.getDis() + " Class is " + distanceAndModelout.getCate());
+					context.write(word, distanceAndModel);		
 				}
 			}
 		}
 	}
 
-	public static class IntSumReducer extends Reducer<Text,DistanceClass,Text,IntWritable> {
+	public static class IntSumReducer extends Reducer<Text,DistanceClass,Text,DistanceClass> {
 		private IntWritable result = new IntWritable();
 		TreeMap<Double, String> KnnInReduce = new TreeMap<Double, String >();
 		int K = 10;
 		
 		public void reduce(Text key, Iterable<DistanceClass> values, Context context) throws IOException, InterruptedException 
 		{
+			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
+				//val.getCate();
+				//val.getDis();
+			System.out.println("Key is " + key);
+			//if(values.iterator().hasNext())
+			//{
+			//	System.out.println ( "String is " +values.iterator().next().getCate());
+			//}
+			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
+			
 			
 			for(DistanceClass val : values)
 			{
-				val.getCate();
-				val.getDis();
+				//val.getCate();
+				//val.getDis();
+				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
 				KnnInReduce.put(val.getDis(),val.getCate());
 				
 				if(KnnInReduce.size() > K)
 				{
 					KnnInReduce.remove(KnnInReduce.lastEntry());
-					//System.out.println("LiangXu");
+					System.out.println("LiangXu");
 				}
 				
 			}
+			
+				
 			//for(int i = 0 ; i < K ;i++)
 			//{
 				//System.out.println("value is " + KnnInReduce.);
 			//}
 			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
 			/*
-			
 			for (DistanceClass val) 
 			{
 				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
-				
 				//KnnInReduce.put(val.getCate(),val.getDis());
-				
-				
 				*/
-			
+			/*
 			DistanceClass DistanceClasstemp = new DistanceClass();
 			
 			ArrayList<String> knnList = new ArrayList<String>(KnnInReduce.values());
 			
 			Map<String, Integer> freqMap = new HashMap<String, Integer>();
+			
+			System.out.println("knnList Size ------>" + knnList.size());
+			
 			for(int i = 0; i < knnList.size();i++)
 			{
+				System.out.println("Key is [ " + key + " ] knnList get [ " + i + " ]  ------>" + knnList.size());
 				Integer frequency = freqMap.get(knnList.get(i));
 		        if(frequency == null)
 		        {
@@ -319,8 +243,10 @@ public class run {
 		            freqMap.put(knnList.get(i), frequency+1);
 		        }
 			}
+			
 		    String mostCommonModel = null;
 		    int maxFrequency = -1;
+		    
 		    for(Map.Entry<String, Integer> entry: freqMap.entrySet())
 		    {
 		        if(entry.getValue() > maxFrequency)
@@ -329,10 +255,10 @@ public class run {
 		            maxFrequency = entry.getValue();
 		        }
 		    }
-			
+			*/
 			//result.set(Integer.parseInt(mostCommonModel));
-			System.out.println("Test " + key + "is blong to " + mostCommonModel);
-			context.write(key, result);
+			//System.out.println("Test " + key + "is blong to " + mostCommonModel);
+			//context.write(key, result);
 		}
 	}
 
@@ -379,11 +305,11 @@ public class run {
 		
 		
 		// Setup the Key Value type
-		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(DistanceClass.class);
+		//job.setMapOutputKeyClass(Text.class);
+		//job.setMapOutputValueClass(DistanceClass.class);
 		
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);
+		job.setOutputValueClass(DistanceClass.class);
 		
 		// Input file and out put file foler
 		FileInputFormat.addInputPath(job, new Path(args[0]));

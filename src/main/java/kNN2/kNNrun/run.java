@@ -10,7 +10,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +76,27 @@ public class run {
 		}
 		
 	}
+	
+	/*
+	public static void bubbleSort(TreeMap<Double, String > Treemap) 
+	{
+	    int n = Treemap.size();
+	    Entry<Double, String> temp = Treemap.firstEntry();
+
+	    for (int i = 0; i < n; i++) {
+	        for (int j = 1; j < (n - i); j++) {
+
+	            if (Treemap.values().toArray()[j - 1]  Treemap[j])  {
+	                temp = numArray[j - 1];
+	                numArray[j - 1] = numArray[j];
+	                numArray[j] = temp;
+	            }
+
+	        }
+	    }
+	}
+	*/
+	
 	public static int[] predictions(Instances data)
 	{
 		System.out.println("data instace is " + data.numInstances());
@@ -107,21 +130,6 @@ public class run {
 		
 	}
 	
-/*
-	public static <String, Double  extends Comparable<Double>> TreeMap<String, Double> sortByValues(final Map<String, Double> map) {
-	    Comparator<K> valueComparator =  new Comparator<K>() {
-	        public int compare(K k1, K k2) {
-	            int compare = map.get(k2).compareTo(map.get(k1));
-	            if (compare == 0) return 1;
-	            else return compare;
-	        }
-	    };
-	    TreeMap<K, V> sortedByValues = new TreeMap<K, V>(valueComparator);
-	    sortedByValues.putAll(map);
-	    return sortedByValues;
-	}
-*/
-	
 	public static class TokenizerMapper extends Mapper<Object, Text, Text, DistanceClass>{
 
 		private final static DoubleWritable one = new DoubleWritable(0.000);
@@ -131,9 +139,9 @@ public class run {
 		DistanceClass distanceAndModel = new DistanceClass();
 		
 		
-		private int k = 5;
-		//TreeMap<String, Double> Kmap = new TreeMap<String, Double >();
-		ArrayList< TreeMap<String, Double> > Kmaplist = new ArrayList< TreeMap<String, Double> >() ;
+		private int k = 10;
+		//TreeMap<Double, String> Kmap = new TreeMap<Double, String >();
+		ArrayList< TreeMap<Double, String> > Kmaplist = new ArrayList< TreeMap<Double, String> >() ;
 		DistanceClass DistanceClass = new DistanceClass();
 		
 		
@@ -174,6 +182,7 @@ public class run {
 					//System.out.println("Liang Xu in the mapper and the file length is " + testFileString.length());
 					StringTokenizer testValues = new StringTokenizer(testFileString, "\n");
 					String temp = null;
+					
 					while (testValues.hasMoreTokens()) {
 						temp = testValues.nextToken();
 						TestCaselist.add(temp);
@@ -186,12 +195,11 @@ public class run {
 			
 			for (int i = 0; i < TestCaselist.size(); i++)
 			{
-				TreeMap<String, Double> Kmap = new TreeMap<String, Double >();
+				TreeMap<Double, String> Kmap = new TreeMap<Double, String >();
 				Kmaplist.add(Kmap);
 			}
 		}
 		
-		@Override
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 			//StringTokenizer itr = new StringTokenizer(value.toString());
 			//System.out.println(getAttemptId(context.getConfiguration()));
@@ -222,37 +230,36 @@ public class run {
 					}
 					//System.out.println(word + " " + (int)testSum);
 				}
+				
 				//System.out.format("Distance between test list [ " + i +  " ]to the test is [ %10.1f ] -------->"+"[ " + trainValueString.toString() + " ] \n" ,testSum);
 				one.set( testSum );
 				word.set(trainValueString.toString());
 				//testSumWriteable.set(testSum);
 				
+				Kmaplist.get(i).put( testSum,trainValueString.toString());
 				
 				if(Kmaplist.get(i).size()>k)
-				{	
-					System.out.println("new distance is " + testSum + "get remove " + Kmaplist.get(i).get(Kmaplist.get(i).lastKey()));
-					Kmaplist.get(i).
-					Kmaplist.get(i).remove(Kmaplist.get(i).lastKey());
-				}else
 				{
-					Kmaplist.get(i).put(trainValueString.toString(), testSum);
+					//System.out.println("new distance is " + testSum + "get remove " + Kmaplist.get(i).get(Kmaplist.get(i).lastKey()));
+					Kmaplist.get(i).remove(Kmaplist.get(i).lastKey());
 				}
 				//context.write(word, one);
 				testSum = 0.00;
 				trainValueString = null;
 			}
 		}
+		
 		protected void cleanup(Context context) throws IOException, InterruptedException
 		{
 			for (int i = 0; i < TestCaselist.size(); i++)
 			{
-				for(Map.Entry<String, Double> entry : Kmaplist.get(i).entrySet() )
+				for(Map.Entry<Double, String> entry : Kmaplist.get(i).entrySet() )
 				{
-					Double distance    = entry.getValue();
-					String classbelong = entry.getKey()  ;
+					Double distance    = entry.getKey();
+					String classbelong = entry.getValue()  ;
 					DistanceClass.set(distance,classbelong);
 					word.set(Integer.toString(i));
-					System.out.println("Mapper update the value key is "+ word + "value is " + distance + "Class is " + classbelong);
+					//System.out.println("Mapper update the value key is "+ word + "value is " + distance + "Class is " + classbelong);
 					context.write(word, DistanceClass);		
 				}
 			}
@@ -261,30 +268,44 @@ public class run {
 
 	public static class IntSumReducer extends Reducer<Text,DistanceClass,Text,IntWritable> {
 		private IntWritable result = new IntWritable();
-		TreeMap<String, Double> KnnInReduce = new TreeMap<String, Double >();
-		int K = 5;
+		TreeMap<Double, String> KnnInReduce = new TreeMap<Double, String >();
+		int K = 10;
 		
-		public void reduce(Text key, DistanceClass values, Context context) throws IOException, InterruptedException 
+		public void reduce(Text key, Iterable<DistanceClass> values, Context context) throws IOException, InterruptedException 
 		{
 			
-			System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
+			for(DistanceClass val : values)
+			{
+				val.getCate();
+				val.getDis();
+				KnnInReduce.put(val.getDis(),val.getCate());
+				
+				if(KnnInReduce.size() > K)
+				{
+					KnnInReduce.remove(KnnInReduce.lastEntry());
+					System.out.println("LiangXu");
+				}
+				
+			}
+			for(int i = 0 ; i < K ;i++)
+			{
+				//System.out.println("value is " + KnnInReduce.);
+			}
+			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
 			/*
+			
 			for (DistanceClass val) 
 			{
 				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
 				
 				//KnnInReduce.put(val.getCate(),val.getDis());
 				
-				if(KnnInReduce.size() > K)
-				{
-					KnnInReduce.remove(KnnInReduce.lastEntry());
-					System.out.println("Liang Xu");
-				}
+				
 				*/
 			
 			DistanceClass DistanceClasstemp = new DistanceClass();
 			
-			ArrayList<String> knnList = new ArrayList<String>(KnnInReduce.keySet());
+			ArrayList<String> knnList = new ArrayList<String>(KnnInReduce.values());
 			
 			Map<String, Integer> freqMap = new HashMap<String, Integer>();
 			for(int i = 0; i < knnList.size();i++)

@@ -82,6 +82,11 @@ public class run {
 			
 		}
 		
+		@Override
+		public String toString() {
+		       return "Class --- > " + this.category;
+		    }
+		
 	}
 	
 	public static class TokenizerMapper extends Mapper<Object, Text, Text, DistanceClass>{
@@ -109,7 +114,7 @@ public class run {
 				//System.out.println("Local file is (Liang Xu)" + localFiles);
 				//System.out.println("Local file length is (Liang Xu)" + localFiles.length);
 				if(localFiles != null && localFiles.length > 0) {
-					String testFileString = FileUtils.readFileToString(new File(System.getProperty("user.dir")+"/test/smallTest1.arff"));
+					String testFileString = FileUtils.readFileToString(new File(System.getProperty("user.dir")+"/test/Test.arff"));
 					//System.out.println("Liang Xu in the mapper and the file length is " + testFileString.length());
 					StringTokenizer testValues = new StringTokenizer(testFileString, "\n");
 					String temp = null;
@@ -241,9 +246,15 @@ public class run {
 		        }
 		    }
 			result.set((double)Integer.parseInt(mostCommonModel),"finish");
-			System.out.println("Test " + key + " is blong to " + mostCommonModel);
+			//System.out.println("Test " + key + " is blong to " + mostCommonModel);
 			wordvalue.set(mostCommonModel);
 			result.set(0.00,mostCommonModel);
+			String temp = key.toString();
+			
+			//System.out.println("temp is" + temp);
+			temp = temp + " case";
+			//System.out.println("temp is" + temp);
+			key.set(temp);
 			context.write(key, result);
 			KnnInReduce.clear();
 		}
@@ -282,7 +293,7 @@ public class run {
 		job.setJarByClass(run.class);
 		
 		// Test data separation
-		DistributedCache.addCacheFile(new Path(System.getProperty("user.dir")+"/test/smallTest1.arff").toUri(),job.getConfiguration());
+		DistributedCache.addCacheFile(new Path(System.getProperty("user.dir")+"/test/Test.arff").toUri(),job.getConfiguration());
 		
 		job.setMapperClass(TokenizerMapper.class);
 		job.setCombinerClass(IntSumReducer.class);
@@ -293,9 +304,6 @@ public class run {
 		// Setup the Key Value type
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(DistanceClass.class);
-		
-		//job.setOutputKeyClass(Text.class);
-		//job.setOutputValueClass(Text.class);
 		
 		// Input file and out put file foler
 		FileInputFormat.addInputPath(job, new Path(args[0]));

@@ -1,2 +1,2 @@
 rm -rf output/
-hadoop jar target/kNNrun-0.0.1-SNAPSHOT.jar kNN2.kNNrun.run datasets/small.arff output -Dmapred.map.tasks=20
+hadoop jar target/kNNrun-0.0.1-SNAPSHOT.jar kNN2.kNNrun.run datasets/medium.arff output

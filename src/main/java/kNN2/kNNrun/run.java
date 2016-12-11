@@ -62,17 +62,24 @@ public class run {
 		
 		public void readFields(DataInput arg0) throws IOException {
 			// TODO Auto-generated method stub
+			distance = arg0.readDouble();
+			category = arg0.readUTF();
 			
 		}
 
 		public void write(DataOutput arg0) throws IOException {
 			// TODO Auto-generated method stub
-			
+			arg0.writeDouble(distance);
+			arg0.writeUTF(category);
 		}
 
 		public int compareTo(DistanceClass o) {
 			// TODO Auto-generated method stub
-			return 0;
+			return (this.category).compareTo(o.category);
+		}
+		public int hashCode() {
+			return Integer.parseInt(category);
+			
 		}
 		
 	}
@@ -178,62 +185,40 @@ public class run {
 	}
 
 	public static class IntSumReducer extends Reducer<Text,DistanceClass,Text,DistanceClass> {
-		private IntWritable result = new IntWritable();
+		private DistanceClass result = new DistanceClass();
 		TreeMap<Double, String> KnnInReduce = new TreeMap<Double, String >();
+		ArrayList< TreeMap<Double, String> > Kmaplist = new ArrayList< TreeMap<Double, String> >() ;
+		private Text wordvalue = new Text();
 		int K = 10;
 		
 		public void reduce(Text key, Iterable<DistanceClass> values, Context context) throws IOException, InterruptedException 
 		{
-			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
-				//val.getCate();
-				//val.getDis();
-			System.out.println("Key is " + key);
-			//if(values.iterator().hasNext())
-			//{
-			//	System.out.println ( "String is " +values.iterator().next().getCate());
-			//}
-			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
-			
-			
+			//System.out.println("Key is " + key);
+
 			for(DistanceClass val : values)
 			{
-				//val.getCate();
-				//val.getDis();
-				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
+				//System.out.println("Liang Xu Dis is --->"+val.getDis() + " cat is----->" + val.getCate());
 				KnnInReduce.put(val.getDis(),val.getCate());
 				
 				if(KnnInReduce.size() > K)
 				{
 					KnnInReduce.remove(KnnInReduce.lastEntry());
-					System.out.println("LiangXu");
+					//System.out.println("LiangXu");
 				}
 				
 			}
-			
 				
-			//for(int i = 0 ; i < K ;i++)
-			//{
-				//System.out.println("value is " + KnnInReduce.);
-			//}
-			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
-			/*
-			for (DistanceClass val) 
-			{
-				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
-				//KnnInReduce.put(val.getCate(),val.getDis());
-				*/
-			/*
 			DistanceClass DistanceClasstemp = new DistanceClass();
 			
 			ArrayList<String> knnList = new ArrayList<String>(KnnInReduce.values());
 			
 			Map<String, Integer> freqMap = new HashMap<String, Integer>();
 			
-			System.out.println("knnList Size ------>" + knnList.size());
+			//System.out.println("knnList Size ------>" + knnList.size());
 			
 			for(int i = 0; i < knnList.size();i++)
 			{
-				System.out.println("Key is [ " + key + " ] knnList get [ " + i + " ]  ------>" + knnList.size());
+				//System.out.println("Key is [ " + key + " ] knnList get [ " + i + " ]  ------>" + knnList.size());
 				Integer frequency = freqMap.get(knnList.get(i));
 		        if(frequency == null)
 		        {
@@ -255,10 +240,12 @@ public class run {
 		            maxFrequency = entry.getValue();
 		        }
 		    }
-			*/
-			//result.set(Integer.parseInt(mostCommonModel));
-			//System.out.println("Test " + key + "is blong to " + mostCommonModel);
-			//context.write(key, result);
+			result.set((double)Integer.parseInt(mostCommonModel),"finish");
+			System.out.println("Test " + key + " is blong to " + mostCommonModel);
+			wordvalue.set(mostCommonModel);
+			result.set(0.00,mostCommonModel);
+			context.write(key, result);
+			KnnInReduce.clear();
 		}
 	}
 
@@ -303,13 +290,12 @@ public class run {
 		job.setReducerClass(IntSumReducer.class);
 		job.setNumReduceTasks(1);
 		
-		
 		// Setup the Key Value type
-		//job.setMapOutputKeyClass(Text.class);
-		//job.setMapOutputValueClass(DistanceClass.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(DistanceClass.class);
 		
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(DistanceClass.class);
+		//job.setOutputKeyClass(Text.class);
+		//job.setOutputValueClass(Text.class);
 		
 		// Input file and out put file foler
 		FileInputFormat.addInputPath(job, new Path(args[0]));

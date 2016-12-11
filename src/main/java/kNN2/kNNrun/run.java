@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
@@ -29,6 +31,8 @@ import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import com.sun.xml.bind.v2.schemagen.xmlschema.List;
+
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
 
@@ -36,7 +40,7 @@ public class run {
 	
 	public static class DistanceClass implements WritableComparable< DistanceClass >
 	{
-		private double distance =0.00;
+		private Double distance =0.00;
 		private String category = null;
 		
 		public void set(Double dis, String cate)
@@ -44,7 +48,7 @@ public class run {
 			this.distance = dis;
 			this.category = cate;
 		}
-		public double getDis()
+		public Double getDis()
 		{
 			return this.distance;
 		}
@@ -103,8 +107,22 @@ public class run {
 		
 	}
 	
+/*
+	public static <String, Double  extends Comparable<Double>> TreeMap<String, Double> sortByValues(final Map<String, Double> map) {
+	    Comparator<K> valueComparator =  new Comparator<K>() {
+	        public int compare(K k1, K k2) {
+	            int compare = map.get(k2).compareTo(map.get(k1));
+	            if (compare == 0) return 1;
+	            else return compare;
+	        }
+	    };
+	    TreeMap<K, V> sortedByValues = new TreeMap<K, V>(valueComparator);
+	    sortedByValues.putAll(map);
+	    return sortedByValues;
+	}
+*/
 	
-	public static class TokenizerMapper extends Mapper<Object, Text, Text, DoubleWritable>{
+	public static class TokenizerMapper extends Mapper<Object, Text, Text, DistanceClass>{
 
 		private final static DoubleWritable one = new DoubleWritable(0.000);
 		private Text word = new Text();
@@ -208,11 +226,16 @@ public class run {
 				one.set( testSum );
 				word.set(trainValueString.toString());
 				//testSumWriteable.set(testSum);
-				Kmaplist.get(i).put(trainValueString.toString(), testSum);
+				
 				
 				if(Kmaplist.get(i).size()>k)
-				{
+				{	
+					System.out.println("new distance is " + testSum + "get remove " + Kmaplist.get(i).get(Kmaplist.get(i).lastKey()));
+					Kmaplist.get(i).
 					Kmaplist.get(i).remove(Kmaplist.get(i).lastKey());
+				}else
+				{
+					Kmaplist.get(i).put(trainValueString.toString(), testSum);
 				}
 				//context.write(word, one);
 				testSum = 0.00;
@@ -229,31 +252,48 @@ public class run {
 					String classbelong = entry.getKey()  ;
 					DistanceClass.set(distance,classbelong);
 					word.set(Integer.toString(i));
-					context.write(, );
-					
-					
+					System.out.println("Mapper update the value key is "+ word + "value is " + distance + "Class is " + classbelong);
+					context.write(word, DistanceClass);		
 				}
 			}
 		}
 	}
 
-	public static class IntSumReducer extends Reducer<Text,DoubleWritable,Text,DoubleWritable> {
+	public static class IntSumReducer extends Reducer<Text,DistanceClass,Text,IntWritable> {
+		private IntWritable result = new IntWritable();
+		TreeMap<String, Double> KnnInReduce = new TreeMap<String, Double >();
+		int K = 5;
 		
-		private DoubleWritable result = new DoubleWritable();
-
-		public void reduce(Text key, Iterable<DoubleWritable> values, Context context) throws IOException, InterruptedException {
+		public void reduce(Text key, DistanceClass values, Context context) throws IOException, InterruptedException 
+		{
 			
-			double sum = 0;
-			
-			for (DoubleWritable val : values) 
+			System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
+			/*
+			for (DistanceClass val) 
 			{
-				//System.out.println("Liang Xu");
-				//System.out.print(values);
-				sum += val.get();
+				System.out.println("Liang Xu Dis is --->"+val.getDis() + "cat is----->" + val.getCate());
+				
+				//KnnInReduce.put(val.getCate(),val.getDis());
+				
+				if(KnnInReduce.size() > K)
+				{
+					KnnInReduce.remove(KnnInReduce.lastEntry());
+					System.out.println("Liang Xu");
+				}
+				*/
+			
+			DistanceClass DistanceClasstemp = new DistanceClass();
+			
+			ArrayList<String> knnList = new ArrayList<String>(KnnInReduce.keySet());
+			
+			Map<String, Integer> freqMap = new HashMap<String, Integer>();
+			for(int i = 0; i < knnList.size();i++)
+			{
+				System.out.println("Liang Xu");
 			}
 			
-			result.set(sum);
-			context.write(key, result);
+			result.set(K);
+			//context.write(key, result);
 		}
 	}
 
@@ -300,8 +340,11 @@ public class run {
 		
 		
 		// Setup the Key Value type
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(DistanceClass.class);
+		
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(DoubleWritable.class);
+		job.setOutputValueClass(IntWritable.class);
 		
 		// Input file and out put file foler
 		FileInputFormat.addInputPath(job, new Path(args[0]));

@@ -1,11 +1,14 @@
 package kNN2.kNNrun;
 
 import java.io.BufferedReader;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +20,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -29,6 +33,43 @@ import weka.core.Instances;
 import weka.core.converters.ArffLoader;
 
 public class run {
+	
+	public static class DistanceClass implements WritableComparable< DistanceClass >
+	{
+		private double distance =0.00;
+		private String category = null;
+		
+		public void set(Double dis, String cate)
+		{
+			this.distance = dis;
+			this.category = cate;
+		}
+		public double getDis()
+		{
+			return this.distance;
+		}
+		
+		public String getCate()
+		{
+			return this.category;
+		}
+		
+		public void readFields(DataInput arg0) throws IOException {
+			// TODO Auto-generated method stub
+			
+		}
+
+		public void write(DataOutput arg0) throws IOException {
+			// TODO Auto-generated method stub
+			
+		}
+
+		public int compareTo(DistanceClass o) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+		
+	}
 	public static int[] predictions(Instances data)
 	{
 		System.out.println("data instace is " + data.numInstances());
@@ -69,9 +110,14 @@ public class run {
 		private Text word = new Text();
 		private double testSum = 0.0000;
 		ArrayList<String> TestCaselist = new ArrayList<String>();
+		DistanceClass distanceAndModel = new DistanceClass();
+		
 		
 		private int k = 5;
-		TreeMap<String, Double> Kmap = new TreeMap<String, Double >();
+		//TreeMap<String, Double> Kmap = new TreeMap<String, Double >();
+		ArrayList< TreeMap<String, Double> > Kmaplist = new ArrayList< TreeMap<String, Double> >() ;
+		DistanceClass DistanceClass = new DistanceClass();
+		
 		
 		   public static String getAttemptId(Configuration conf) throws IllegalArgumentException
 		   {
@@ -119,6 +165,12 @@ public class run {
 			}catch(IOException ex) {
 				System.err.println("Exception in mapper setup: " + ex.getMessage());
 			}
+			
+			for (int i = 0; i < TestCaselist.size(); i++)
+			{
+				TreeMap<String, Double> Kmap = new TreeMap<String, Double >();
+				Kmaplist.add(Kmap);
+			}
 		}
 		
 		@Override
@@ -134,13 +186,12 @@ public class run {
 			
 			for (int i = 0; i < TestCaselist.size(); i++)
 			{
+				
 				StringTokenizer itr = new StringTokenizer(value.toString(),",");
 				StringTokenizer testitr = new StringTokenizer(TestCaselist.get(i).toString(),",");
 				String trainValueString = null;
 				double trainValueDouble = 0.00;
 				double testValueDouble = 0.00;
-				
-				
 				while (itr.hasMoreTokens()) 
 				{
 					trainValueString = itr.nextToken();
@@ -153,14 +204,35 @@ public class run {
 					}
 					//System.out.println(word + " " + (int)testSum);
 				}
-				//System.out.format("Distance between to the test is [ %10.1f ] -------->"+"[ " + trainValueString.toString() + " ] \n" ,testSum);
-				
+				//System.out.format("Distance between test list [ " + i +  " ]to the test is [ %10.1f ] -------->"+"[ " + trainValueString.toString() + " ] \n" ,testSum);
 				one.set( testSum );
 				word.set(trainValueString.toString());
 				//testSumWriteable.set(testSum);
-				Kmap.put(trainValueString.toString(), testSum);
-				context.write(word, one);
+				Kmaplist.get(i).put(trainValueString.toString(), testSum);
+				
+				if(Kmaplist.get(i).size()>k)
+				{
+					Kmaplist.get(i).remove(Kmaplist.get(i).lastKey());
+				}
+				//context.write(word, one);
 				testSum = 0.00;
+				trainValueString = null;
+			}
+		}
+		protected void cleanup(Context context) throws IOException, InterruptedException
+		{
+			for (int i = 0; i < TestCaselist.size(); i++)
+			{
+				for(Map.Entry<String, Double> entry : Kmaplist.get(i).entrySet() )
+				{
+					Double distance    = entry.getValue();
+					String classbelong = entry.getKey()  ;
+					DistanceClass.set(distance,classbelong);
+					word.set(Integer.toString(i));
+					context.write(, );
+					
+					
+				}
 			}
 		}
 	}

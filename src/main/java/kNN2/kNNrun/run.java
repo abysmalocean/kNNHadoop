@@ -283,14 +283,14 @@ public class run {
 				if(KnnInReduce.size() > K)
 				{
 					KnnInReduce.remove(KnnInReduce.lastEntry());
-					System.out.println("LiangXu");
+					//System.out.println("LiangXu");
 				}
 				
 			}
-			for(int i = 0 ; i < K ;i++)
-			{
+			//for(int i = 0 ; i < K ;i++)
+			//{
 				//System.out.println("value is " + KnnInReduce.);
-			}
+			//}
 			//System.out.println("Liang Xu Dis is --->"+values.getDis() + "cat is----->" + values.getCate());
 			/*
 			
@@ -310,11 +310,29 @@ public class run {
 			Map<String, Integer> freqMap = new HashMap<String, Integer>();
 			for(int i = 0; i < knnList.size();i++)
 			{
-				System.out.println("Liang Xu");
+				Integer frequency = freqMap.get(knnList.get(i));
+		        if(frequency == null)
+		        {
+		            freqMap.put(knnList.get(i), 1);
+		        } else
+		        {
+		            freqMap.put(knnList.get(i), frequency+1);
+		        }
 			}
+		    String mostCommonModel = null;
+		    int maxFrequency = -1;
+		    for(Map.Entry<String, Integer> entry: freqMap.entrySet())
+		    {
+		        if(entry.getValue() > maxFrequency)
+		        {
+		            mostCommonModel = entry.getKey();
+		            maxFrequency = entry.getValue();
+		        }
+		    }
 			
-			result.set(K);
-			//context.write(key, result);
+			//result.set(Integer.parseInt(mostCommonModel));
+			System.out.println("Test " + key + "is blong to " + mostCommonModel);
+			context.write(key, result);
 		}
 	}
 
